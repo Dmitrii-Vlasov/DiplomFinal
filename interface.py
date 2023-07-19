@@ -2,7 +2,7 @@
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.utils import get_random_id
-
+from datetime import datetime
 from config import comunity_token, acces_token, db_url_object
 from core import VkTools
 from DB import DataBase
@@ -15,6 +15,7 @@ class BotInterface():
         self.longpoll = VkLongPoll(self.vk)
         self.vk_tools = VkTools(acces_token)
         self.database = DataBase(db_url_object)
+        self.database.create_table()
         self.params = {}
         self.worksheets = []
         self.offset = 0
@@ -38,8 +39,12 @@ class BotInterface():
                 flag = False
         return flag
 
-# обработка событий / получение сообщений
+    def get_parameter(self):
+        for event in self.longpoll.listen():
+            if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+                return event.text
 
+# обработка событий / получение сообщений
     def event_handler(self):
         for event in self.longpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW and event.to_me:
@@ -48,10 +53,29 @@ class BotInterface():
                     self.params = self.vk_tools.get_profile_info(event.user_id)
                     self.message_send(
                         event.user_id, f'Привет друг, {self.params["name"]}')
+                    # Проверка полученных данных о пользвоателе
+                    for i in self.params:
+                        if self.params[i] is None:
+                            if self.params['name'] is None:
+                                self.message_send(event.user_id, 'Введите ваше имя и фамилию:')
+                                self.params['name'] = self.get_parameter()
+                            elif self.params['sex'] is None:
+                                self.message_send(event.user_id, 'Введите свой пол (1-м, 2-ж):')
+                                self.params['sex'] = int(self.get_parameter())
+                            elif self.params['city'] is None:
+                                self.message_send(event.user_id, 'Введите город:')
+                                self.params['city'] = self.get_parameter()
+                            elif self.params['year'] is None:
+                                self.message_send(event.user_id, 'Введите дату рождения (дд.мм.гггг):')
+                                self.params['year'] = datetime.now().year - int(self.get_parameter().split('.')[2])
+
+                    self.message_send(event.user_id, 'Успешная регистрация!')
+
                 elif event.text.lower() == 'поиск':
                     '''Логика для поиска анкет'''
                     self.message_send(
                         event.user_id, 'Начинаем поиск')
+
                     while True:
                         if self.worksheets:
                             worksheet = self.worksheets.pop()
