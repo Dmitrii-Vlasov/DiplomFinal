@@ -7,6 +7,16 @@ class DataBase:
         self.conn = psycopg2.connect(db_url_object)
         self.cursor = self.conn.cursor()
 
+    def create_table(self):
+        create_table_query = """
+            CREATE TABLE IF NOT EXISTS users (
+                profile_id INTEGER,
+                worksheet_id INTEGER
+            )
+        """
+        self.cursor.execute(create_table_query)
+        self.conn.commit()
+
     def insert(self, profile_id, worksheet_id):
         insert_query = sql.SQL("INSERT INTO users (profile_id, worksheet_id) VALUES (%s, %s)")
         self.cursor.execute(insert_query, (profile_id, worksheet_id))
